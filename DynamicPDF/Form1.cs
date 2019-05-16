@@ -33,15 +33,20 @@ namespace DynamicPDF
 
             string fileName = textBox2.Text;
 
-            // Save the document
+            // Names the file
             string filename = $@"C:\Users\terry.dinh\source\repos\DynamicPDF\mergedfiles\{fileName}_tempfile.pdf";
 
+            // Adds title page (need to play around with xgraphics to format the text correctly
+            addOverlay(outputDocument);
+
+            // Saves the PDF
             outputDocument.Save(filename);
         }
 
         private string[] GetSelectedFiles()
         {
             List<string> retVal = new List<string>();
+
             foreach (string itemChecked in checkedListBox.CheckedItems)
             {
                 retVal.Add(itemChecked);
@@ -53,6 +58,7 @@ namespace DynamicPDF
 
         private void LoadListBox(string[] files)
         {
+            // Pulling in PDFs and assigning their values respectively
             checkedListBox.Items.AddRange(files);
         }
 
@@ -71,8 +77,6 @@ namespace DynamicPDF
                 // Open the document to import pages from it.
                 PdfDocument inputDocument = PdfReader.Open(file, PdfDocumentOpenMode.Import);
 
-          
-
                 // Iterate pages
                 int count = inputDocument.PageCount;
                 for (int idx = 0; idx < count; idx++)
@@ -80,15 +84,25 @@ namespace DynamicPDF
                     // Get the page from the external document
                     PdfPage page = inputDocument.Pages[idx];
 
+                    // Page number text
                     var text = $"{file} Page {idx}";
 
                     // and add it to the output document.
                     outputDocument.AddPage(page);
+
+                    // Adding bookmarks for each page
                     outline.Outlines.Add(text, firstPage, true);
                 }
-                
             }
 
+            // Add page numbers
+            addPageNumbers(outputDocument);
+
+            return outputDocument;
+        }
+
+        private static void addPageNumbers(PdfDocument outputDocument)
+        {
             // Make a font and a brush to draw the page counter.
             XFont font = new XFont("Verdana", 8);
             XBrush brush = XBrushes.Black;
@@ -113,8 +127,24 @@ namespace DynamicPDF
                         XStringFormats.TopCenter);
                 }
             }
+        }
 
-            return outputDocument;
+        private void addOverlay(PdfDocument combined_pdf)
+        {
+            PdfDocument document = combined_pdf;
+
+            // Add Title page
+            var titlePage = document.InsertPage(0);
+
+            // Select the first page
+            PdfPage page = document.Pages[0];
+
+            page.Orientation = PdfSharp.PageOrientation.Portrait;
+
+            XGraphics gfx = XGraphics.FromPdfPage(page, XPageDirection.Downwards);
+
+            // Write on top of background with known colors
+            gfx.DrawString("Title Page", new XFont("Helvetica", 12, XFontStyle.Regular), XBrushes.Black, 10, 0, XStringFormats.TopLeft);
         }
 
         private static string[] LoadFiles()
