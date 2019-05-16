@@ -36,9 +36,6 @@ namespace DynamicPDF
             // Names the file
             string filename = $@"C:\Users\terry.dinh\source\repos\DynamicPDF\mergedfiles\{fileName}_tempfile.pdf";
 
-            // Adds title page (need to play around with xgraphics to format the text correctly
-            addOverlay(outputDocument);
-
             // Saves the PDF
             outputDocument.Save(filename);
         }
@@ -71,6 +68,14 @@ namespace DynamicPDF
             var firstPage = outputDocument.AddPage();
             PdfOutline outline = outputDocument.Outlines.Add("Root", firstPage, true, PdfOutlineStyle.Bold, XColors.Red);
 
+            // Add title page to first page
+            TitlePage(outputDocument);
+
+            // Add table of contents
+            TableOfContents(outputDocument);
+
+            Document document = new Document();
+
             // Iterate files
             foreach (string file in files)
             {
@@ -94,11 +99,90 @@ namespace DynamicPDF
                     outline.Outlines.Add(text, firstPage, true);
                 }
             }
-
+            
             // Add page numbers
             addPageNumbers(outputDocument);
 
             return outputDocument;
+        }
+
+        static void TitlePage(PdfDocument document)
+        {
+            PdfPage page = document.Pages[0];
+            XGraphics gfx = XGraphics.FromPdfPage(page);
+
+            XFont font = new XFont("Verdana", 13, XFontStyle.Bold);
+
+            gfx.DrawString("Title Page", font, XBrushes.Black,
+              new XRect(100, 100, page.Width - 200, 300), XStringFormats.Center);
+
+            // You always need a MigraDoc document for rendering.
+            Document doc = new Document();
+            Section sec = doc.AddSection();
+            // Add a single paragraph with some text and format information.
+            Paragraph para = sec.AddParagraph();
+            para.Format.Alignment = ParagraphAlignment.Justify;
+            para.Format.Font.Name = "Verdana";
+            para.Format.Font.Size = 12;
+            para.Format.Font.Color = MigraDoc.DocumentObjectModel.Colors.Black;
+            para.Format.Font.Color = MigraDoc.DocumentObjectModel.Colors.Black;
+            para.AddText(" ipit iurero dolum zzriliquisis nit wis dolore vel et nonsequipit, velendigna " +
+              "auguercilit lor se dipisl duismod tatem zzrit at laore magna feummod oloborting ea con vel " +
+              "essit augiati onsequat luptat nos diatum vel ullum illummy nonsent nit ipis et nonsequis " +
+              "niation utpat. Odolobor augait et non etueril landre min ut ulla feugiam commodo lortie ex " +
+              "essent augait el ing eumsan hendre feugait prat augiatem amconul laoreet. ≤≥≈≠");
+            para.Format.Borders.Distance = "5pt";
+            para.Format.Borders.Color = Colors.Gold;
+
+            // Create a renderer and prepare (=layout) the document
+            MigraDoc.Rendering.DocumentRenderer docRenderer = new DocumentRenderer(doc);
+            docRenderer.PrepareDocument();
+
+            // Render the paragraph. You can render tables or shapes the same way.
+            docRenderer.RenderObject(gfx, XUnit.FromCentimeter(5), XUnit.FromCentimeter(10), "12cm", para);
+
+            gfx.Dispose();
+        }
+
+        static void TableOfContents(PdfDocument document)
+        {
+            PdfPage page = document.InsertPage(1);
+            XGraphics gfx = XGraphics.FromPdfPage(page);
+
+            XFont font = new XFont("Verdana", 13, XFontStyle.Bold);
+
+            gfx.DrawString("The Table of Contents", font, XBrushes.Black,
+              new XRect(100, 100, page.Width - 200, 300), XStringFormats.Center);
+
+            // You always need a MigraDoc document for rendering.
+            Document doc = new Document();
+            Section section = doc.AddSection();
+            // Add a single paragraph with some text and format information.
+            Paragraph para = section.AddParagraph();
+            para.Format.Alignment = ParagraphAlignment.Justify;
+            para.Format.Font.Name = "Times New Roman";
+            para.Format.Font.Size = 12;
+            para.Format.Font.Color = MigraDoc.DocumentObjectModel.Colors.DarkGray;
+            para.Format.Font.Color = MigraDoc.DocumentObjectModel.Colors.DarkGray;
+
+            para.AddText("Duisism odigna acipsum delesenisl ");
+            para.AddFormattedText("ullum in velenit", TextFormat.Bold);
+            para.AddText(" ipit iurero dolum zzriliquisis nit wis dolore vel et nonsequipit, velendigna " +
+              "auguercilit lor se dipisl duismod tatem zzrit at laore magna feummod oloborting ea con vel " +
+              "essit augiati onsequat luptat nos diatum vel ullum illummy nonsent nit ipis et nonsequis " +
+              "niation utpat. Odolobor augait et non etueril landre min ut ulla feugiam commodo lortie ex " +
+              "essent augait el ing eumsan hendre feugait prat augiatem amconul laoreet. ≤≥≈≠");
+            para.Format.Borders.Distance = "5pt";
+            para.Format.Borders.Color = Colors.Gold;
+
+            // Create a renderer and prepare (=layout) the document
+            MigraDoc.Rendering.DocumentRenderer docRenderer = new DocumentRenderer(doc);
+            docRenderer.PrepareDocument();
+
+            // Render the paragraph. You can render tables or shapes the same way.
+            docRenderer.RenderObject(gfx, XUnit.FromCentimeter(5), XUnit.FromCentimeter(10), "12cm", para);
+
+            gfx.Dispose();
         }
 
         private static void addPageNumbers(PdfDocument outputDocument)
@@ -125,26 +209,10 @@ namespace DynamicPDF
                         brush,
                         layoutRectangle,
                         XStringFormats.TopCenter);
+                    gfx.Dispose();
                 }
             }
-        }
-
-        private void addOverlay(PdfDocument combined_pdf)
-        {
-            PdfDocument document = combined_pdf;
-
-            // Add Title page
-            var titlePage = document.InsertPage(0);
-
-            // Select the first page
-            PdfPage page = document.Pages[0];
-
-            page.Orientation = PdfSharp.PageOrientation.Portrait;
-
-            XGraphics gfx = XGraphics.FromPdfPage(page, XPageDirection.Downwards);
-
-            // Write on top of background with known colors
-            gfx.DrawString("Title Page", new XFont("Helvetica", 12, XFontStyle.Regular), XBrushes.Black, 10, 0, XStringFormats.TopLeft);
+            
         }
 
         private static string[] LoadFiles()
