@@ -66,13 +66,8 @@ namespace DynamicPDF
 
             // Create first page
             var firstPage = outputDocument.AddPage();
-            PdfOutline outline = outputDocument.Outlines.Add("Root", firstPage, true, PdfOutlineStyle.Bold, XColors.Red);
-
-            // Add title page to first page
-            TitlePage(outputDocument);
-
-            // Add table of contents
-            TableOfContents(outputDocument);
+            // Create second page
+            var secondPage = outputDocument.AddPage();
 
             Document document = new Document();
 
@@ -89,19 +84,18 @@ namespace DynamicPDF
                     // Get the page from the external document
                     PdfPage page = inputDocument.Pages[idx];
 
-                    // Page number text
-                    var text = $"{file} Page {idx}";
-
                     // and add it to the output document.
                     outputDocument.AddPage(page);
-
-                    // Adding bookmarks for each page
-                    outline.Outlines.Add(text, firstPage, true);
                 }
             }
-            
+            // Add title page to first page
+            TitlePage(outputDocument);
+
             // Add page numbers
             addPageNumbers(outputDocument);
+
+            // Add table of contents
+            TableOfContents(outputDocument);
 
             return outputDocument;
         }
@@ -146,41 +140,39 @@ namespace DynamicPDF
 
         static void TableOfContents(PdfDocument document)
         {
-            PdfPage page = document.InsertPage(1);
+            // Puts the Table of contents on the second page
+            PdfPage page = document.Pages[1];
             XGraphics gfx = XGraphics.FromPdfPage(page);
+            gfx.MUH = PdfFontEncoding.Unicode;
 
-            XFont font = new XFont("Verdana", 13, XFontStyle.Bold);
-
-            gfx.DrawString("The Table of Contents", font, XBrushes.Black,
-              new XRect(100, 100, page.Width - 200, 300), XStringFormats.Center);
-
-            // You always need a MigraDoc document for rendering.
+            // Create MigraDoc document + Setup styles
             Document doc = new Document();
+            Styles.DefineStyles(doc);
+
+            // Add header
             Section section = doc.AddSection();
-            // Add a single paragraph with some text and format information.
-            Paragraph para = section.AddParagraph();
-            para.Format.Alignment = ParagraphAlignment.Justify;
-            para.Format.Font.Name = "Times New Roman";
-            para.Format.Font.Size = 12;
-            para.Format.Font.Color = MigraDoc.DocumentObjectModel.Colors.DarkGray;
-            para.Format.Font.Color = MigraDoc.DocumentObjectModel.Colors.DarkGray;
+            Paragraph paragraph = section.AddParagraph("Table of Contents");
+            paragraph.Format.Font.Size = 14;
+            paragraph.Format.Font.Bold = true;
+            paragraph.Format.SpaceAfter = 24;
+            paragraph.Format.OutlineLevel = OutlineLevel.Level1;
 
-            para.AddText("Duisism odigna acipsum delesenisl ");
-            para.AddFormattedText("ullum in velenit", TextFormat.Bold);
-            para.AddText(" ipit iurero dolum zzriliquisis nit wis dolore vel et nonsequipit, velendigna " +
-              "auguercilit lor se dipisl duismod tatem zzrit at laore magna feummod oloborting ea con vel " +
-              "essit augiati onsequat luptat nos diatum vel ullum illummy nonsent nit ipis et nonsequis " +
-              "niation utpat. Odolobor augait et non etueril landre min ut ulla feugiam commodo lortie ex " +
-              "essent augait el ing eumsan hendre feugait prat augiatem amconul laoreet. ≤≥≈≠");
-            para.Format.Borders.Distance = "5pt";
-            para.Format.Borders.Color = Colors.Gold;
 
-            // Create a renderer and prepare (=layout) the document
-            MigraDoc.Rendering.DocumentRenderer docRenderer = new DocumentRenderer(doc);
+            // Add links - these are the PdfSharp outlines/bookmarks added previously when concatinating the pages
+            foreach (var bookmark in document.Outlines)
+            {
+                paragraph = section.AddParagraph();
+                paragraph.Style = "TOC";
+                //paragraph.AddBookmark(bookmark.Title);
+                Hyperlink hyperlink = paragraph.AddHyperlink(bookmark.Title);
+                hyperlink.AddText($"{bookmark.Title}\t");
+                //hyperlink.AddPageRefField(bookmark.Title);
+            }
+
+            // Render document
+            DocumentRenderer docRenderer = new DocumentRenderer(doc);
             docRenderer.PrepareDocument();
-
-            // Render the paragraph. You can render tables or shapes the same way.
-            docRenderer.RenderObject(gfx, XUnit.FromCentimeter(5), XUnit.FromCentimeter(10), "12cm", para);
+            docRenderer.RenderPage(gfx, 1);
 
             gfx.Dispose();
         }
@@ -190,6 +182,9 @@ namespace DynamicPDF
             // Make a font and a brush to draw the page counter.
             XFont font = new XFont("Verdana", 8);
             XBrush brush = XBrushes.Black;
+
+            // Need to pull in selected document names
+
 
             // Add the page counter.
             string noPages = outputDocument.Pages.Count.ToString();
@@ -211,6 +206,12 @@ namespace DynamicPDF
                         XStringFormats.TopCenter);
                     gfx.Dispose();
                 }
+
+                // Table of contents file name
+                var text = $"file name here";
+
+                // Adding bookmarks for each page
+                outputDocument.Outlines.Add(text, page, true);
             }
             
         }
